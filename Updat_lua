@@ -1,1 +1,66 @@
-gg.alert(" Hai olol ")
+
+-- 1) Check the account exists before asking for credentials
+local statusRes = gg.makeRequest(
+    "https://gg-sidali-production.up.railway.app/api/sidali/status?sidali=SIDALI"
+)
+if not statusRes or statusRes.code ~= 200 then
+    gg.alert("❌ Status check failed: " ..
+        tostring(statusRes and (statusRes.code or statusRes.content) or "no response"))
+    return
+end
+
+-- 2) Ask for credentials
+local data = gg.prompt({
+    '📧  CPM1 Email',
+    '🔒  CPM1 Password',
+}, {
+    '',
+    '',
+}, {
+    'text',
+    'text',
+})
+
+if not data then
+    gg.toast("Cancelled")
+    return
+end
+
+local email    = data[1] or ""
+local password = data[2] or ""
+
+if email == "" or password == "" then
+    gg.alert("❌ Email and password are required")
+    return
+end
+
+-- 3) Minimal JSON escaping for user input
+local function jsonEsc(s)
+    return (s:gsub('[\\"]', '\\%0')
+             :gsub('\n', '\\n')
+             :gsub('\r', '\\r')
+             :gsub('\t', '\\t'))
+end
+
+local payload = string.format(
+    '{"sidali":"SIDALI","email":"%s","password":"%s"}',
+    jsonEsc(email), jsonEsc(password)
+)
+
+-- 4) Send the request and actually check the result
+gg.toast(" Sending King Rank request...")
+local res = gg.makeRequest(
+    "https://gg-sidali-production.up.railway.app/api/sidali/king-rank",
+    { ['Content-Type'] = 'application/json' },
+    payload
+)
+
+if res and res.code == 200 then
+    gg.alert("✅ King Rank activated successfully.")
+else
+    local msg = "unknown error"
+    if res then
+        msg = tostring(res.content or res.code or "empty response")
+    end
+    gg.alert("❌ King Rank failed:\n" .. msg)
+end
